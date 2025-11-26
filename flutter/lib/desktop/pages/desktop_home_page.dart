@@ -965,3 +965,142 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     );
   }
 }
+
+void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
+  final pw = await bind.mainGetPermanentPassword();
+  final p0 = TextEditingController(text: pw);
+  final p1 = TextEditingController(text: pw);
+  var errMsg0 = "";
+  var errMsg1 = "";
+  final RxString rxPass = pw.trim().obs;
+  final rules = [
+    DigitValidationRule(),
+    UppercaseValidationRule(),
+    LowercaseValidationRule(),
+    // SpecialCharacterValidationRule(),
+    MinCharactersValidationRule(8),
+  ];
+  final maxLength = bind.mainMaxEncryptLen();
+
+  gFFI.dialogManager.show((setState, close, context) {
+    submit() {
+      setState(() {
+        errMsg0 = "";
+        errMsg1 = "";
+      });
+      final pass = p0.text.trim();
+      if (pass.isNotEmpty) {
+        final Iterable violations = rules.where((r) => !r.validate(pass));
+        if (violations.isNotEmpty) {
+          setState(() {
+            errMsg0 =
+                '${translate('Prompt')}: ${violations.map((r) => r.name).join(', ')}';
+          });
+          return;
+        }
+      }
+      if (p1.text.trim() != pass) {
+        setState(() {
+          errMsg1 =
+              '${translate('Prompt')}: ${translate("The confirmation is not identical.")}';
+        });
+        return;
+      }
+      bind.mainSetPermanentPassword(password: pass);
+      if (pass.isNotEmpty) {
+        notEmptyCallback?.call();
+      }
+      close();
+    }
+
+    return CustomAlertDialog(
+      title: Text(translate("Set Password")),
+      content: ConstrainedBox(
+        constraints: const BoxConstraints(minWidth: 500),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(
+              height: 8.0,
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    obscureText: true,
+                    decoration: InputDecoration(
+                        labelText: translate('Password'),
+                        errorText: errMsg0.isNotEmpty ? errMsg0 : null),
+                    controller: p0,
+                    autofocus: true,
+                    onChanged: (value) {
+                      rxPass.value = value.trim();
+                      setState(() {
+                        errMsg0 = '';
+                      });
+                    },
+                    maxLength: maxLength,
+                  ).workaroundFreezeLinuxMint(),
+                ),
+              ],
+            ),
+            Row(
+              children: [
+                Expanded(child: PasswordStrengthIndicator(password: rxPass)),
+              ],
+            ).marginSymmetric(vertical: 8),
+            const SizedBox(
+              height: 8.0,
+            ),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    obscureText: true,
+                    decoration: InputDecoration(
+                        labelText: translate('Confirmation'),
+                        errorText: errMsg1.isNotEmpty ? errMsg1 : null),
+                    controller: p1,
+                    onChanged: (value) {
+                      setState(() {
+                        errMsg1 = '';
+                      });
+                    },
+                    maxLength: maxLength,
+                  ).workaroundFreezeLinuxMint(),
+                ),
+              ],
+            ),
+            const SizedBox(
+              height: 8.0,
+            ),
+            Obx(() => Wrap(
+                  runSpacing: 8,
+                  spacing: 4,
+                  children: rules.map((e) {
+                    var checked = e.validate(rxPass.value.trim());
+                    return Chip(
+                        label: Text(
+                          e.name,
+                          style: TextStyle(
+                              color: checked
+                                  ? const Color(0xFF0A9471)
+                                  : Color.fromARGB(255, 198, 86, 157)),
+                        ),
+                        backgroundColor: checked
+                            ? const Color(0xFFD0F7ED)
+                            : Color.fromARGB(255, 247, 205, 232));
+                  }).toList(),
+                ))
+          ],
+        ),
+      ),
+      actions: [
+        dialogButton("Cancel", onPressed: close, isOutline: true),
+        dialogButton("OK", onPressed: submit),
+      ],
+      onSubmit: submit,
+      onCancel: close,
+    );
+  });
+}
