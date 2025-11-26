@@ -64,6 +64,27 @@ lazy_static::lazy_static! {
     pub static ref NEW_STORED_PEER_CONFIG: Mutex<HashSet<String>> = Default::default();
     pub static ref DEFAULT_SETTINGS: RwLock<HashMap<String, String>> = {
         let mut map = HashMap::new();
+        //ID服务器，该配置部分客户端生效，读取Repository secrets值
+        map.insert(
+            "custom-rendezvous-server".to_string(), 
+            option_env!("RENDEZVOUS_SERVER").unwrap_or("rs-ny.rustdesk.com").into()
+        );
+        //中继服务器，读取Repository secrets值
+        map.insert(
+            "relay-server".to_string(), 
+            option_env!("RELAY_SERVER").unwrap_or("rs-ny.rustdesk.com").into()
+        );
+        //API服务器，读取Repository secrets值
+        map.insert(
+            "api-server".to_string(), 
+            option_env!("API_SERVER").unwrap_or("https://admin.rustdesk.com").into()
+        );
+        //KEY，读取Repository secrets值
+        map.insert(
+            "key".to_string(), 
+            option_env!("RS_PUB_KEY").unwrap_or("OeVuKk5nlHiXp+APNn0Y3pC1Iwpwn44JGqrQCsWqmBw=").into()
+        );
+        //使用DirectX捕获屏幕
         map.insert("enable-directx-capture".to_string(), "Y".to_string());
         //访问模式，custom：自定义，full：完全控制，view：共享屏幕
         map.insert("access-mode".to_string(), "full".to_string());
@@ -72,17 +93,22 @@ lazy_static::lazy_static! {
         //允许远程修改配置
         map.insert("allow-remote-config-modification".to_string(), "Y".to_string());
         //接受远程方式，password：密码，click：点击，password-click：同时使用
-        map.insert("approve-mode".to_string(), "password".to_string());
+        map.insert("approve-mode".to_string(), "password-click.to_string());
         //密码验证方式，use-temporary-password：一次性密码，use-permanent-password：固定密码，use-both-passwords：同时使用
-        map.insert("verification-method".to_string(), "use-permanent-password".to_string());
+        map.insert("verification-method".to_string(), "use-both-passwords".to_string());
         //隐藏连接管理窗口，approve-mode=password，verification-method=use-permanent-password，才可生效，项目中有修复代码
-        map.insert("allow-hide-cm".to_string(), "Y".to_string());
+        map.insert("allow-hide-cm".to_string(), "N".to_string());
         //隐藏托盘图标，approve-mode=password，verification-method=use-permanent-password，才可生效，项目中有修复代码
-        map.insert("hide-tray".to_string(), "Y".to_string());
+        map.insert("hide-tray".to_string(), "N".to_string());
         RwLock::new(map)
     };
     pub static ref OVERWRITE_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
-    pub static ref DEFAULT_DISPLAY_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
+    pub static ref DEFAULT_DISPLAY_SETTINGS: RwLock<HashMap<String, String>> = {
+        let mut map = HashMap::new();
+        //显示模式，adaptive：适应窗口，original：原始尺寸，
+        map.insert("view_style".to_string(), "adaptive".to_string());
+        RwLock::new(map)
+    };
     pub static ref OVERWRITE_DISPLAY_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
     pub static ref DEFAULT_LOCAL_SETTINGS: RwLock<HashMap<String, String>> = {
         let mut map = HashMap::new();
@@ -105,8 +131,34 @@ lazy_static::lazy_static! {
         RwLock::new(map)
     };
     pub static ref OVERWRITE_LOCAL_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
-    pub static ref HARD_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
-    pub static ref BUILTIN_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
+    pub static ref HARD_SETTINGS: RwLock<HashMap<String, String>> = {
+        let mut map = HashMap::new();
+        //被控默认密码，固定密码，读取Repository secrets值
+        map.insert(
+            "password".to_string(), 
+            option_env!("DEFAULT_PASSWORD").unwrap_or("").into()
+        );
+        RwLock::new(map)
+    };
+    pub static ref BUILTIN_SETTINGS: RwLock<HashMap<String, String>> = {
+        let mut map = HashMap::new();
+        //默认连接密码，请求控制的时候要求输入的密码，读取Repository secrets值
+        map.insert(
+            "default-connect-password".to_string(), 
+            option_env!("DEFAULT_PASSWORD").unwrap_or("").into()
+        );
+        //隐藏远程打印设置选项
+        map.insert("hide-remote-printer-settings".to_string(), "Y".to_string());
+        //隐藏代理设置选项
+        map.insert("hide-proxy-settings".to_string(), "Y".to_string());
+        //隐藏服务设置选项
+        map.insert("hide-server-settings".to_string(), "Y".to_string());
+        //隐藏安全设置选项
+        map.insert("hide-security-settings".to_string(), "Y".to_string());
+        //隐藏网络设置选项
+        map.insert("hide-network-settings".to_string(), "Y".to_string());
+        RwLock::new(map)
+    };
 }
 
 lazy_static::lazy_static! {
@@ -137,8 +189,8 @@ const CHARS: &[char] = &[
     'm', 'n', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
 ];
 
-pub const RENDEZVOUS_SERVERS: &[&str] = &["192.140.181.97"];
-pub const RS_PUB_KEY: &str = "ttqQoB3J5oWMcl7BegawBPqNzZI8RoJkcGkkIRy8N+w=";
+pub const RENDEZVOUS_SERVERS: &[&str] = &["ru.cbu.net"];
+pub const RS_PUB_KEY: &str = "B2t4j5lY94FSoOT5atVl3ErKVhvv3PvPCbsw6chPQD4=";
 
 pub const RENDEZVOUS_PORT: i32 = 21116;
 pub const RELAY_PORT: i32 = 21117;
