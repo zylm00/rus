@@ -86,14 +86,14 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               translate("Your Desktop"),
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 36,
+                fontSize: 32,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 4,
               ),
             ),
 
             // 新增小字说明行
-            SizedBox(height: 10),
+            SizedBox(height: 6),
             Text(
               "复制id发给小伙伴",     // 这里换成你要显示的小字
               textAlign: TextAlign.center,
@@ -103,7 +103,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               ),
             ),  
                 
-            SizedBox(height: 40),
+            SizedBox(height: 20),
             
             // ID 显示框
             Consumer<ServerModel>(
