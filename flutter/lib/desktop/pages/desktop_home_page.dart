@@ -86,11 +86,23 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               translate("Your Desktop"),
               textAlign: TextAlign.center,
               style: TextStyle(
-                fontSize: 26,
+                fontSize: 36,
                 fontWeight: FontWeight.bold,
                 letterSpacing: 4,
               ),
             ),
+
+            // 新增小字说明行
+            SizedBox(height: 10),
+            Text(
+              "你的电脑已准备就绪",     // 这里换成你要显示的小字
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+              ),
+            ),  
+                
             SizedBox(height: 40),
             
             // ID 显示框
@@ -178,7 +190,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                   elevation: 0,
                 ),
                 child: Text(
-                  translate("Copy"),
+                  translate("复制"),
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -189,9 +201,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
             SizedBox(height: 30),
             
             // 网络状态显示 - 保留原版逻辑
-            Obx(() => OnlineStatusWidget(
-              onSvcStatusChanged: () {},
-            )),
+            Obx(() => NetStatusWidget()),
           ],
         ),
       ),
