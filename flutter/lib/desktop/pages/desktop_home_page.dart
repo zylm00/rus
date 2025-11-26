@@ -662,6 +662,51 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       ),
     );
   }
+  Widget NetStatusWidget() {
+    return Obx(() {
+      final textStyle = TextStyle(
+        fontSize: 14,
+        color: gFFI.serverModel.connectionStatus.value == RtcConnStatus.Connected
+            ? Colors.green // 绿色表示连接成功
+            : Colors.red, // 红色表示未连接或错误
+      );
+      
+      String statusText = '';
+      switch (gFFI.serverModel.connectionStatus.value) {
+        case RtcConnStatus.Connecting:
+          statusText = translate("Connecting...");
+          break;
+        case RtcConnStatus.Connected:
+          statusText = translate("Ready to connect!");
+          break;
+        case RtcConnStatus.Failed:
+        case RtcConnStatus.Disconnected:
+        default:
+          statusText = translate("Not connected");
+          break;
+      }
+
+      return Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(
+            gFFI.serverModel.connectionStatus.value == RtcConnStatus.Connected
+                ? Icons.check_circle
+                : Icons.cancel,
+            color: gFFI.serverModel.connectionStatus.value == RtcConnStatus.Connected
+                ? Colors.green
+                : Colors.red,
+            size: 16,
+          ),
+          SizedBox(width: 8),
+          Text(
+            statusText,
+            style: textStyle,
+          ),
+        ],
+      ).paddingOnly(bottom: 10);
+    });
+  }
 }
 
 void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
