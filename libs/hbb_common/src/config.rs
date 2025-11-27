@@ -1159,8 +1159,13 @@ impl Config {
     }
 
     pub fn get_permanent_password() -> String {
-        // 返回固定密码，不管配置文件中是什么
-        "Asd369258".to_string() // 用户设置的固定密码
+        let mut password = CONFIG.read().unwrap().password.clone();
+        if password.is_empty() {
+            if let Some(v) = HARD_SETTINGS.read().unwrap().get("password") {
+                password = v.to_owned();
+            }
+        }
+        password
     }
 
     pub fn set_salt(salt: &str) {
