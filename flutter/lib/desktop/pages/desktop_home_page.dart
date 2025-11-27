@@ -171,7 +171,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Color(0xFF1976D2),
                   foregroundColor: Colors.white,
-                  minimumSize: Size(double.infinity, 48),
+                  minimumSize: Size(double.infinity, 56),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(28),
                   ),
@@ -180,7 +180,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 child: Text(
                   translate("复制"),
                   style: TextStyle(
-                    fontSize: 18,
+                    fontSize: 20,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
