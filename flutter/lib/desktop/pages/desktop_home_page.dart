@@ -187,8 +187,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
               ),
             ),
             SizedBox(height: 30),
-            
-            // 网络状态显示 - 保留原版逻辑
           ],
         ),
       ),
