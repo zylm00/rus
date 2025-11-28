@@ -36,8 +36,6 @@ const borderColor = Color(0xFF2F65BA);
 
 class _DesktopHomePageState extends State<DesktopHomePage>
     with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
-  final _leftPaneScrollController = ScrollController();
-
   @override
   bool get wantKeepAlive => true;
   var systemError = '';
@@ -50,17 +48,18 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   Timer? _updateTimer;
   bool isCardClosed = false;
 
-  final RxBool _editHover = false.obs;
   final RxBool _block = false.obs;
-
   final GlobalKey _childKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
     super.build(context);
     return _buildBlock(
-      child: Center(
-        child: buildLeftPane(context),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(child: buildRightPane(context)), // 全屏显示主内容
+        ],
       ),
     );
   }
@@ -70,137 +69,82 @@ class _DesktopHomePageState extends State<DesktopHomePage>
         block: _block, mask: true, use: canBeBlocked, child: child);
   }
 
-  Widget buildLeftPane(BuildContext context) {
-    return ChangeNotifierProvider.value(
-      value: gFFI.serverModel,
-      child: Container(
-        width: 400,
-        padding: EdgeInsets.symmetric(horizontal: 40, vertical: 30),
-        color: Theme.of(context).colorScheme.background,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            // 标题
-            Text(
-              translate("Your Desktop"),
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 30,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 8,
-              ),
-            ),
-            SizedBox(height: 50),
-            
-            // ID 显示框
-            Consumer<ServerModel>(
-              builder: (context, model, child) => Container(
-                padding: EdgeInsets.symmetric(vertical: 20, horizontal: 30),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [],
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      translate("ID"),
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      model.serverId.text.isEmpty ? "--------" : model.serverId.text,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 28,
-                        letterSpacing: 2,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SizedBox(height: 20),
-            
-            // 密码显示框
-            Consumer<ServerModel>(
-              builder: (context, model, child) => Container(
-                padding: EdgeInsets.symmetric(vertical: 20, horizontal: 30),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(12),
-                  boxShadow: [],
-                ),
-                child: Column(
-                  children: [
-                    Text(
-                      translate("One-time Password"),
-                      style: TextStyle(
-                        fontSize: 14,
-                        color: Colors.grey[600],
-                      ),
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      model.serverPasswd.text.isEmpty ? "------" : model.serverPasswd.text,
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 24,
-                        letterSpacing: 1,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            SizedBox(height: 40),
-            
-            // 复制按钮
-            Consumer<ServerModel>(
-              builder: (context, model, child) => ElevatedButton(
-                onPressed: () {
-                  String copyText = '${model.serverId.text}\n${model.serverPasswd.text}';
-                  Clipboard.setData(ClipboardData(text: copyText));
-                  showToast(translate("Copied"));
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF1976D2),
-                  foregroundColor: Colors.white,
-                  minimumSize: Size(double.infinity, 56),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(28),
-                  ),
-                  elevation: 0,
-                ),
-                child: Text(
-                  translate("复制"),
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-            SizedBox(height: 30),
-          ],
+  // 主显示区域 - 包含所有内容
+  Widget buildRightPane(BuildContext context) {
+    final isIncomingOnly = bind.isIncomingOnly();
+    final isOutgoingOnly = bind.isOutgoingOnly();
+
+    final children = <Widget>[
+      if (!isOutgoingOnly) buildPresetPasswordWarning(),
+      if (bind.isCustomClient())
+        Align(
+          alignment: Alignment.center,
+          child: loadPowered(context),
         ),
+      Align(
+        alignment: Alignment.center,
+        child: loadLogo(),
+      ),
+      buildTip(context),
+      if (!isOutgoingOnly) buildIDBoard(context),
+      if (!isOutgoingOnly) buildPasswordBoard(context),
+      FutureBuilder<Widget>(
+        future: Future.value(
+            Obx(() => buildHelpCards(stateGlobal.updateUrl.value))),
+        builder: (_, data) {
+          if (data.hasData) {
+            // IncomingOnly 模式下更新窗口尺寸
+            if (isIncomingOnly) {
+              if (isInHomePage()) {
+                Future.delayed(Duration(milliseconds: 300), () {
+                  _updateWindowSize();
+                });
+              }
+            }
+            return data.data!;
+          } else {
+            return const Offstage();
+          }
+        },
+      ),
+      buildPluginEntry(),
+    ];
+
+    return Container(
+      color: Theme.of(context).scaffoldBackgroundColor,
+      child: Column(
+        children: [
+          // 主内容区域（可滚动）
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(
+                key: _childKey,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: children,
+              ),
+            ),
+          ),
+
+          // ⭐ 在这里添加你的文字（以网络状态为间距）
+          Padding(
+            padding: const EdgeInsets.only(left: 20, right: 16, bottom: 6),
+            child: Text(
+              translate("温馨提示：sos版本无安装点关闭即可"),   // ← 你要显示的文字
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),  
+          // 底部网络状态
+          Divider(),
+          OnlineStatusWidget(
+            onSvcStatusChanged: () {},
+          ).marginOnly(bottom: 6, right: 6),
+        ],
       ),
     );
   }
 
-  buildRightPane(BuildContext context) {
-    return Container(
-      color: Theme.of(context).scaffoldBackgroundColor,
-      child: ConnectionPage(),
-    );
-  }
-
-  buildIDBoard(BuildContext context) {
+  // ID 显示板块
+  Widget buildIDBoard(BuildContext context) {
     final model = gFFI.serverModel;
     return Container(
       margin: const EdgeInsets.only(left: 20, right: 11),
@@ -235,7 +179,6 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                                   ?.color
                                   ?.withOpacity(0.5)),
                         ).marginOnly(top: 5),
-                        buildPopupMenu(context)
                       ],
                     ),
                   ),
@@ -268,47 +211,24 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     );
   }
 
-  Widget buildPopupMenu(BuildContext context) {
-    final textColor = Theme.of(context).textTheme.titleLarge?.color;
-    RxBool hover = false.obs;
-    return InkWell(
-      onTap: DesktopTabPage.onAddSetting,
-      child: Tooltip(
-        message: translate('Settings'),
-        child: Obx(
-          () => CircleAvatar(
-            radius: 15,
-            backgroundColor: hover.value
-                ? Theme.of(context).scaffoldBackgroundColor
-                : Theme.of(context).colorScheme.background,
-            child: Icon(
-              Icons.more_vert_outlined,
-              size: 20,
-              color: hover.value ? textColor : textColor?.withOpacity(0.5),
-            ),
-          ),
-        ),
+  // 密码显示板块
+  Widget buildPasswordBoard(BuildContext context) {
+    return ChangeNotifierProvider.value(
+      value: gFFI.serverModel,
+      child: Consumer<ServerModel>(
+        builder: (context, model, child) {
+          return buildPasswordBoard2(context, model);
+        },
       ),
-      onHover: (value) => hover.value = value,
     );
   }
 
-  buildPasswordBoard(BuildContext context) {
-    return ChangeNotifierProvider.value(
-        value: gFFI.serverModel,
-        child: Consumer<ServerModel>(
-          builder: (context, model, child) {
-            return buildPasswordBoard2(context, model);
-          },
-        ));
-  }
-
-  buildPasswordBoard2(BuildContext context, ServerModel model) {
+  Widget buildPasswordBoard2(BuildContext context, ServerModel model) {
     RxBool refreshHover = false.obs;
-    RxBool editHover = false.obs;
     final textColor = Theme.of(context).textTheme.titleLarge?.color;
     final showOneTime = model.approveMode != 'click' &&
         model.verificationMethod != kUsePermanentPassword;
+
     return Container(
       margin: EdgeInsets.only(left: 20.0, right: 16, top: 13, bottom: 13),
       child: Row(
@@ -374,6 +294,33 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                         ).marginOnly(right: 8, top: 4),
                     ],
                   ),
+                  // 复制按钮 - 同时复制 ID 和密码
+                  SizedBox(height: 12),
+                  InkWell(
+                    onTap: () {
+                      Clipboard.setData(ClipboardData(
+                        text:
+                            '${model.serverId.text}\n${model.serverPasswd.text}',
+                      ));
+                      showToast(translate("Copied"));
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Color(0xFF2576E3),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        translate("复制"),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -383,7 +330,8 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     );
   }
 
-  buildTip(BuildContext context) {
+  // 提示文本
+  Widget buildTip(BuildContext context) {
     final isOutgoingOnly = bind.isOutgoingOnly();
     return Padding(
       padding:
@@ -398,7 +346,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    translate("Your Desktop"),
+                    translate("RustDesk桌面"),
                     style: Theme.of(context).textTheme.titleLarge,
                   ),
                 ),
@@ -409,7 +357,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
           ),
           if (!isOutgoingOnly)
             Text(
-              translate("desk_tip"),
+              translate("点击复制发给小伙伴"),
               overflow: TextOverflow.clip,
               style: Theme.of(context).textTheme.bodySmall,
             ),
@@ -427,7 +375,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   Widget buildHelpCards(String updateUrl) {
     return Container();
   }
-  
+
   Widget buildInstallCard(String title, String content, String btnText,
       GestureTapCallback onPressed,
       {double marginTop = 20.0,
@@ -435,7 +383,118 @@ class _DesktopHomePageState extends State<DesktopHomePage>
       String? link,
       bool? closeButton,
       String? closeOption}) {
-    return Container();
+    if (bind.mainGetBuildinOption(key: kOptionHideHelpCards) == 'Y' &&
+        content != 'install_daemon_tip') {
+      return const SizedBox();
+    }
+    void closeCard() async {
+      if (closeOption != null) {
+        await bind.mainSetLocalOption(key: closeOption, value: 'N');
+        if (bind.mainGetLocalOption(key: closeOption) == 'N') {
+          setState(() {
+            isCardClosed = true;
+          });
+        }
+      } else {
+        setState(() {
+          isCardClosed = true;
+        });
+      }
+    }
+
+    return Stack(
+      children: [
+        Container(
+          margin: EdgeInsets.fromLTRB(
+              0, marginTop, 0, bind.isIncomingOnly() ? marginTop : 0),
+          child: Container(
+              decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  Color.fromARGB(255, 226, 66, 188),
+                  Color.fromARGB(255, 244, 114, 124),
+                ],
+              )),
+              padding: EdgeInsets.all(20),
+              child: Column(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: (title.isNotEmpty
+                          ? <Widget>[
+                              Center(
+                                  child: Text(
+                                translate(title),
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15),
+                              ).marginOnly(bottom: 6)),
+                            ]
+                          : <Widget>[]) +
+                      <Widget>[
+                        if (content.isNotEmpty)
+                          Text(
+                            translate(content),
+                            style: TextStyle(
+                                height: 1.5,
+                                color: Colors.white,
+                                fontWeight: FontWeight.normal,
+                                fontSize: 13),
+                          ).marginOnly(bottom: 20)
+                      ] +
+                      (btnText.isNotEmpty
+                          ? <Widget>[
+                              Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    FixedWidthButton(
+                                      width: 150,
+                                      padding: 8,
+                                      isOutline: true,
+                                      text: translate(btnText),
+                                      textColor: Colors.white,
+                                      borderColor: Colors.white,
+                                      textSize: 20,
+                                      radius: 10,
+                                      onTap: onPressed,
+                                    )
+                                  ])
+                            ]
+                          : <Widget>[]) +
+                      (help != null
+                          ? <Widget>[
+                              Center(
+                                  child: InkWell(
+                                      onTap: () async =>
+                                          await launchUrl(Uri.parse(link!)),
+                                      child: Text(
+                                        translate(help),
+                                        style: TextStyle(
+                                            decoration:
+                                                TextDecoration.underline,
+                                            color: Colors.white,
+                                            fontSize: 12),
+                                      )).marginOnly(top: 6)),
+                            ]
+                          : <Widget>[]))),
+        ),
+        if (closeButton != null && closeButton == true)
+          Positioned(
+            top: 18,
+            right: 0,
+            child: IconButton(
+              icon: Icon(
+                Icons.close,
+                color: Colors.white,
+                size: 20,
+              ),
+              onPressed: closeCard,
+            ),
+          ),
+      ],
+    );
   }
 
   @override
@@ -584,7 +643,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     WidgetsBinding.instance.addObserver(this);
   }
 
-  _updateWindowSize() {
+  void _updateWindowSize() {
     RenderObject? renderObject = _childKey.currentContext?.findRenderObject();
     if (renderObject == null) {
       return;
@@ -631,6 +690,7 @@ class _DesktopHomePageState extends State<DesktopHomePage>
   }
 }
 
+// 设置密码对话框
 void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
   final pw = await bind.mainGetPermanentPassword();
   final p0 = TextEditingController(text: pw);
@@ -642,7 +702,6 @@ void setPasswordDialog({VoidCallback? notEmptyCallback}) async {
     DigitValidationRule(),
     UppercaseValidationRule(),
     LowercaseValidationRule(),
-    // SpecialCharacterValidationRule(),
     MinCharactersValidationRule(8),
   ];
   final maxLength = bind.mainMaxEncryptLen();
