@@ -228,6 +228,10 @@ class _DesktopHomePageState extends State<DesktopHomePage>
     final textColor = Theme.of(context).textTheme.titleLarge?.color;
     final showOneTime = model.approveMode != 'click' &&
         model.verificationMethod != kUsePermanentPassword;
+    // 如果不显示一次性密码，返回空 widget
+    if (!showOneTime) {
+      return SizedBox.shrink();
+    }  
 
     return Container(
       margin: EdgeInsets.only(left: 20.0, right: 16, top: 13, bottom: 13),
